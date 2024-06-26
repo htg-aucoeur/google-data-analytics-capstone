@@ -1,0 +1,207 @@
+---
+title: "Cyclistic Data - R Notebook Demo"
+author: Aucoeur Ngo
+date: June 26, 2024
+output: 
+  github_document:
+    toc: true
+    toc_depth: 2
+---
+
+# Case Study: How Does a Bike-Share Navigate Speedy Success?
+
+Coursera Course 8 Google Data Analytics <https://www.coursera.org/learn/google-data-analytics-capstone/>
+
+## ASK
+
+### Business Task:
+
+Analyze historical bike data to understand how annual members and casual riders use Cyclistic bike differently to make recommendations for converting casual riders into annual members.
+
+## PREPARE
+
+We are using 12 months of data provided by **Motivate International Inc.** under this license: <https://divvybikes.com/data-license-agreement>
+
+### Dataset Details
+
+```{r}
+# Install if necessary
+install.packages("tidyverse")
+install.packages("lubridate")
+install.packages("ggplot2")
+install.packages("dplyr")
+install.packages("readr")
+```
+
+```{r}
+# Load libraries necessary for all steps in the analysis proccess of Cyclistic's historical data
+library(tidyverse)  
+library(lubridate)  
+library(ggplot2)  
+library(dplyr)
+library(readr)
+```
+
+Import dataset
+
+```{r}
+# Import Dataset
+# CyclisticData <- read_csv("Trip Data/2024-2023-12mo-tripdata.zip")
+
+# Import Data by month June 2023 - May 2024
+X202405_divvy_tripdata <- read_csv("Trip Data/202405-divvy-tripdata.csv")
+X202404_divvy_tripdata <- read_csv("Trip Data/202404-divvy-tripdata.csv")
+X202403_divvy_tripdata <- read_csv("Trip Data/202403-divvy-tripdata.csv")
+X202402_divvy_tripdata <- read_csv("Trip Data/202402-divvy-tripdata.csv")
+X202401_divvy_tripdata <- read_csv("Trip Data/202401-divvy-tripdata.csv")
+X202312_divvy_tripdata <- read_csv("Trip Data/202312-divvy-tripdata.csv")
+X202311_divvy_tripdata <- read_csv("Trip Data/202311-divvy-tripdata.csv")
+X202310_divvy_tripdata <- read_csv("Trip Data/202310-divvy-tripdata.csv")
+X202309_divvy_tripdata <- read_csv("Trip Data/202309-divvy-tripdata.csv")
+X202308_divvy_tripdata <- read_csv("Trip Data/202308-divvy-tripdata.csv")
+X202307_divvy_tripdata <- read_csv("Trip Data/202307-divvy-tripdata.csv")
+X202306_divvy_tripdata <- read_csv("Trip Data/202306-divvy-tripdata.csv")
+
+```
+
+```{r}
+# Merge monthly datasets into one
+Tripdata_12mo <- rbind(X202306_divvy_tripdata, X202307_divvy_tripdata, X202308_divvy_tripdata, X202309_divvy_tripdata, X202310_divvy_tripdata, X202311_divvy_tripdata, X202312_divvy_tripdata, X202401_divvy_tripdata, X202402_divvy_tripdata, X202403_divvy_tripdata, X202404_divvy_tripdata, X202405_divvy_tripdata)
+
+head(Tripdata_12mo)
+# glimpse(Tripdata_12mo)
+summary(Tripdata_12mo)
+```
+
+```{r}
+glimpse(Tripdata_12mo)
+# Show dimensions of the table
+dim(Tripdata_12mo)
+
+# Show column names
+colnames(Tripdata_12mo)
+```
+
+```{r}
+# Other summary / dataset info functions
+# summary(CyclisticData)
+# as_tibble(CyclisticData)
+```
+
+Cleaning dataset
+```{r}
+install.packages("here")
+install.packages("skimr")
+install.packages("janitor")
+```
+
+```{r}
+library(here)
+library(skimr)
+library(janitor)
+```
+
+```{r}
+
+
+# Removing NAs / null from data
+CleanedData <- Tripdata_12mo %>% na.omit()
+CleanedDataNoDupes <- CleanedData %>% distinct(ride_id, .keep_all = TRUE)
+
+print(paste("Removed", nrow(CleanedData) - nrow(CleanedDataNoDupes), "duplicates with same ride_id"))
+
+glimpse(CleanedData)
+dim(CleanedData)
+# as_tibble(CleanedData)
+```
+
+
+```{r}
+# Add columns for Month, weekday
+# Calculating ride_length from started_at & ended_at
+TransformedCleaned <- CleanedData %>%
+  mutate(ride_length = ended_at - started_at) %>%
+  mutate(month = month(started_at, label = TRUE)) %>%
+  mutate(weekday = wday(started_at, label = TRUE)) %>%
+  #select(ride_id, rideable_type, month, weekday, ride_length, member_casual)
+  select(ride_id, rideable_type, month, weekday,started_at, ended_at, ride_length, member_casual, start_station_name, end_station_name, start_lat, start_lng, end_lat, end_lng)
+
+# Adding columns for Country, State, City 
+StationData <- 
+  cbind(TransformedCleaned, 
+        country = "united states",
+        state = "illinois",
+        city = "chicago") 
+
+head(StationData)
+```
+### Exporting Dataframes
+
+```{r}
+write.csv(TransformedCleaned, "Trip Data/cleaned/merged-monthly-daily.csv")
+write.csv(StationData, "Trip Data/cleaned/station_data.csv")
+```
+
+If dataframes are still too large, consider:
+  - Exporting by month
+  - Try `sample()` to export a smaller set https://www.rdocumentation.org/packages/base/versions/3.6.2/topics/sample
+
+
+```{r}
+CountMemberCasual <- TransformedCleaned %>% count(member_casual)
+print(CountMemberCasual)
+```
+
+## SHARE
+
+### Visualization in R
+
+Monthly Usage
+```{r}
+# Prepping data for visualization
+MonthlyRidesByMemberType <- TransformedCleaned %>%
+  group_by(month, member_casual) %>%
+  summarize(total_rides = n())
+
+# Column Chart Viz
+MonthlyRidesViz <- ggplot(data = MonthlyRidesByMemberType, 
+                       mapping = aes(x = month, y = total_rides, fill = member_casual)) +
+  geom_col() +
+  labs(title = "Bike Usage Frequency", subtitle = "Rides per month", x = "Month", y = "Total Rides")
+
+
+MonthlyRidesViz
+```
+Conclusion: Overall usage is greatest from May - Oct with lowest usage corresponding to Dec - Jan (winter months).  We also observe that members have more consistent usage across the 12 months, compared to casual users.
+
+Usage By Day
+```{r}
+# Create the dataframe for the vis / prepare the data
+DailyRidesByMemberType <- TransformedCleaned %>%
+    group_by(weekday, member_casual) %>%
+  summarize(total_rides = n())
+
+# Generate the viz
+DailyRidesViz <- ggplot(data = DailyRidesByMemberType,
+                        aes(x =  weekday, y = total_rides, fill = member_casual)) +
+                  geom_col(position = "dodge") + 
+                  labs(title = "Usage By Day", subtitle = "Total rides per day",
+                       x = "Day", y = "Total Number of Rides")
+
+DailyRidesViz
+
+```
+
+## Areas to Branch Off / Dive Deeper
+
+- How does the Daily chart look when only looking at data from May - Oct?
+- How do we display the monthly chart in a way that is easy to see at a glance when our data is June 2023 - May 2024 (as opposed to Jan - Dec)
+- What other charts and graphs would provide good "at-a-glance" insights?
+
+
+
+
+
+
+
+
