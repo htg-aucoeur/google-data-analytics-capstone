@@ -8,7 +8,7 @@ output:
     toc_depth: 2
 ---
 
-# Case Study: How Does a Bike-Share Navigate Speedy Success?
+## Case Study: How Does a Bike-Share Navigate Speedy Success?
 
 Coursera Course 8 Google Data Analytics <https://www.coursera.org/learn/google-data-analytics-capstone/>
 
@@ -135,7 +135,7 @@ StationData <-
 
 head(StationData)
 ```
-### Exporting Dataframes
+## Exporting Dataframes
 
 ```{r}
 write.csv(TransformedCleaned, "Trip Data/cleaned/merged-monthly-daily.csv")
@@ -152,9 +152,7 @@ CountMemberCasual <- TransformedCleaned %>% count(member_casual)
 print(CountMemberCasual)
 ```
 
-## SHARE
-
-### Visualization in R
+## Visualization in R
 
 Monthly Usage
 ```{r}
